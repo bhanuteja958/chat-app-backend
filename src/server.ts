@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import { API_VERSION } from "./common/constants";
 import authRouter from "./routes/auth.routes";
 import { authMiddleWare } from "./middlewares/auth.middleware";
+import { Server } from "http";
+import configureWebSocket from "./sockets";
 
 const PORT = process.env.PORT || 3000;
 const app: Express = express();
@@ -21,6 +23,8 @@ app.use(cors(corsOptions));
 
 app.use(`${API_VERSION}/auth`, authRouter);
 
-app.listen(3000, () => {
+const server: Server = app.listen(3000, () => {
     console.log(`Server listening on port ${PORT}...`);
 });
+
+configureWebSocket(server);

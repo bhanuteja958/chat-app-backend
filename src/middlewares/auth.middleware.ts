@@ -1,13 +1,11 @@
 import { NextFunction, Request, Response } from "express";
-import { createResponse, errorResponse } from "../common/helpers";
-import { verify } from "jsonwebtoken";
+import {
+    createResponse,
+    errorResponse,
+    validateAccessToken,
+} from "../common/helpers";
+import { JwtPayload, verify } from "jsonwebtoken";
 import { HTTP_STATUS } from "../common/constants";
-
-const tokenVerificationErrors = [
-    "TokenExpiredError",
-    "JsonWebTokenError",
-    "NotBeforeError",
-];
 
 const NoAuthRequiredUrls = ["/api/v1/auth/login", "/api/v1/auth/register"];
 
@@ -28,23 +26,22 @@ export const authMiddleWare = (
             );
             return;
         } else {
-            const decodedToken = verify(
-                accessToken,
-                process.env.JWT_ACCESS_KEY,
-            );
+            const verificationResult: string | JwtPayload =
+                validateAccessToken(accessToken);
 
-            req.user = decodedToken;
-            next();
+            if (typeof verificationResult === "string") {
+                res.status(HTTP_STATUS.unauthorized).json(
+                    createResponse(false, verificationResult),
+                );
+                return;
+            } else {
+                req.user = verificationResult;
+                next();
+            }
         }
     } catch (error) {
-        if (tokenVerificationErrors.includes(error?.name)) {
-            res.status(HTTP_STATUS.unauthorized).json(
-                createResponse(false, "You are an unauthorized user"),
-            );
-        } else {
-            res.status(HTTP_STATUS.internalServerError).json(
-                errorResponse(error.message),
-            );
-        }
+        res.status(HTTP_STATUS.internalServerError).json(
+            errorResponse(error.message),
+        );
     }
 };
