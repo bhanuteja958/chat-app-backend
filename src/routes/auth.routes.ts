@@ -36,7 +36,7 @@ authRouter.get("/logout", async (req: Request, res: Response) => {
     try {
         res.clearCookie("accessToken")
             .status(HTTP_STATUS.ok)
-            .json(createResponse(true, "Successfully loggedout"));
+            .json(createResponse(true, "Successfully logged out"));
     } catch (error) {
         res.status(HTTP_STATUS.internalServerError).json(
             errorResponse(error.message),

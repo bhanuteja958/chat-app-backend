@@ -1,4 +1,4 @@
-import { verify } from "jsonwebtoken";
+import { JwtPayload, verify } from "jsonwebtoken";
 
 export const createResponse = (
     success: boolean,
@@ -20,10 +20,37 @@ export const errorResponse = (errorMessage: string) => {
 
 export const validateAccessToken = (accessToken: string) => {
     try {
-        const decodedToken = verify(accessToken, process.env.JWT_ACCESS_KEY);
-        return decodedToken;
+        const decodedToken: string | JwtPayload = verify(
+            accessToken,
+            process.env.JWT_ACCESS_KEY,
+        );
+
+        if (
+            typeof decodedToken === "string" ||
+            !decodedToken.userId ||
+            !decodedToken.email
+        ) {
+            return {
+                isAuthenticated: false,
+                message: "Invalid token payload",
+                userData: null,
+            };
+        } else {
+            return {
+                isAuthenticated: true,
+                message: "",
+                userData: {
+                    userId: decodedToken.userId,
+                    email: decodedToken.email,
+                },
+            };
+        }
     } catch (error) {
-        return "You are not an authorized user";
+        return {
+            isAuthenticated: false,
+            message: "You are not an authorized user",
+            userData: null,
+        };
     }
 };
 
@@ -42,4 +69,24 @@ export const getCookiesObject = (cookiesString: string) => {
     }
 
     return cookies;
+};
+
+export const validateRequiredEnvironmentVariables = () => {
+    const requiredEnvironmentVariables = [
+        "DB_NAME",
+        "DB_HOST",
+        "DB_USER",
+        "DB_PASSWORD",
+        "JWT_ACCESS_KEY",
+    ];
+
+    const areAllEnvironmentVariablesExists = requiredEnvironmentVariables.every(
+        (variable) => {
+            return process.env[variable] ? true : false;
+        },
+    );
+
+    if (!areAllEnvironmentVariablesExists) {
+        process.exit(1);
+    }
 };

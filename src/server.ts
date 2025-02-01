@@ -7,6 +7,10 @@ import authRouter from "./routes/auth.routes";
 import { authMiddleWare } from "./middlewares/auth.middleware";
 import { Server } from "http";
 import configureWebSocket from "./sockets";
+import { validateRequiredEnvironmentVariables } from "./common/helpers";
+
+//checking if all environment variables exists or not
+validateRequiredEnvironmentVariables();
 
 const PORT = process.env.PORT || 3000;
 const app: Express = express();

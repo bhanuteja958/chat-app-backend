@@ -1,3 +1,6 @@
+import { IncomingMessage } from "http";
+import WebSocket from "ws";
+
 declare global {
     interface iResponse {
         success: boolean;
@@ -13,9 +16,28 @@ declare global {
         };
     }
 
+    interface WebSocketExt extends WebSocket {
+        isAlive: boolean;
+        userId?: number;
+    }
+
+    interface iDecodedToken {
+        userId: number;
+        email: string;
+    }
+    interface IncomingMessageExt extends IncomingMessage {
+        user?: iDecodedToken;
+    }
+
+    interface iTokenVerifyResponse {
+        isAuthenticated: boolean;
+        message: string;
+        userData: iDecodedToken;
+    }
+
     namespace Express {
         export interface Request {
-            user?: any;
+            user?: iDecodedToken;
         }
     }
 }

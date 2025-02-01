@@ -4,7 +4,6 @@ import {
     errorResponse,
     validateAccessToken,
 } from "../common/helpers";
-import { JwtPayload, verify } from "jsonwebtoken";
 import { HTTP_STATUS } from "../common/constants";
 
 const NoAuthRequiredUrls = ["/api/v1/auth/login", "/api/v1/auth/register"];
@@ -26,16 +25,16 @@ export const authMiddleWare = (
             );
             return;
         } else {
-            const verificationResult: string | JwtPayload =
+            const tokenVerifyResp: iTokenVerifyResponse =
                 validateAccessToken(accessToken);
 
-            if (typeof verificationResult === "string") {
+            if (!tokenVerifyResp) {
                 res.status(HTTP_STATUS.unauthorized).json(
-                    createResponse(false, verificationResult),
+                    createResponse(false, tokenVerifyResp.message),
                 );
                 return;
             } else {
-                req.user = verificationResult;
+                req.user = tokenVerifyResp.userData;
                 next();
             }
         }

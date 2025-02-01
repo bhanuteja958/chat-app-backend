@@ -58,16 +58,16 @@ export const checkIfUserExistsWithEmail = async (email: string) => {
     }
 };
 
-export const getUserPasswordHash = async (email: string) => {
+export const getUserIdAndPasswordHash = async (email: string) => {
     let connection: PoolConnection = null;
     try {
         connection = await pool.getConnection();
         const [results]: [RowDataPacket[], FieldPacket[]] =
             await connection.execute(
-                "SELECT password_hash FROM users WHERE email=? LIMIT 1",
+                "SELECT user_id, password_hash FROM users WHERE email=? LIMIT 1",
                 [email],
             );
-        return results.length > 0 ? results[0].password_hash : null;
+        return results.length > 0 ? results[0] : null;
     } catch (error) {
         throw error;
     } finally {

@@ -4,7 +4,7 @@ import { createResponse } from "../common/helpers";
 import {
     checkIfUserExistsWithEmail,
     createUser,
-    getUserPasswordHash,
+    getUserIdAndPasswordHash,
 } from "../services/auth.services";
 import argon2 from "argon2";
 import { sign } from "jsonwebtoken";
@@ -74,9 +74,11 @@ export const loginUser = async (req: Request) => {
             };
         }
 
-        const passwordHash = await getUserPasswordHash(payload.email);
+        const userIdAndPassWordHash = await getUserIdAndPasswordHash(
+            payload.email,
+        );
 
-        if (!passwordHash) {
+        if (!userIdAndPassWordHash) {
             return {
                 status: HTTP_STATUS.notFound,
                 response: createResponse(
@@ -86,8 +88,10 @@ export const loginUser = async (req: Request) => {
             };
         }
 
+        const { user_id, password_hash } = userIdAndPassWordHash;
+
         const isPasswordMatching = await argon2.verify(
-            passwordHash,
+            password_hash,
             payload.password,
         );
 
@@ -100,6 +104,7 @@ export const loginUser = async (req: Request) => {
 
         const accessToken = sign(
             {
+                userId: user_id,
                 email: payload.email,
             },
             process.env.JWT_ACCESS_KEY,
