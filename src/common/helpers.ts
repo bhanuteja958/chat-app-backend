@@ -90,3 +90,8 @@ export const validateRequiredEnvironmentVariables = () => {
         process.exit(1);
     }
 };
+
+/* Returns the date from an ISO string without the T in the date*/
+export const getDateForDBStorage = () => {
+    return new Date().toISOString().slice(0, 19).replace("T", " ");
+};

@@ -35,6 +35,12 @@ declare global {
         userData: iDecodedToken;
     }
 
+    interface iMessage {
+        fromId: number;
+        toId: number;
+        content: string;
+    }
+
     namespace Express {
         export interface Request {
             user?: iDecodedToken;

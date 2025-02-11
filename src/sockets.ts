@@ -4,11 +4,24 @@ import internal from "stream";
 import {
     createResponse,
     getCookiesObject,
+    getDateForDBStorage,
     validateAccessToken,
 } from "./common/helpers";
 import { URL } from "url";
+import { MESSSAGE } from "./schema/chat.schema";
+import producer from "./services/kafka/producer.kafka";
+
+(async function () {
+    try {
+        await producer.connect();
+    } catch (error) {
+        process.exit(1);
+    }
+})();
 
 const HEARTBEAT_INTERVAL = 1000 * 15; // 15 seconds
+
+export const clients: Record<number, WebSocketExt> = {};
 
 const wss = new WebSocketServer({
     noServer: true,
@@ -27,6 +40,7 @@ const hearbeatInterval = setInterval(() => {
 
 wss.on("connection", (ws: WebSocketExt, req: IncomingMessageExt) => {
     ws.isAlive = true;
+    clients[req.user.userId] = ws;
 
     if (req.user) {
         ws.userId = req.user.userId;
@@ -38,12 +52,58 @@ wss.on("connection", (ws: WebSocketExt, req: IncomingMessageExt) => {
         console.log("Connection opened");
     });
 
-    ws.on("message", (data: RawData, isBinary: boolean) => {
-        ws.send(`received data:  ${data.toString()}`, (error) => {
-            if (error) {
-                console.log(error);
-            }
-        });
+    ws.on("message", async (data: RawData, isBinary: boolean) => {
+        let response = {};
+        let isValidMessage = true;
+        let message: Record<string, any> = {};
+        try {
+            message = JSON.parse(data.toString()) as iMessage;
+            isValidMessage = await MESSSAGE.isValid(message);
+        } catch (error) {
+            isValidMessage = false;
+        }
+
+        if (!isValidMessage) {
+            response = createResponse(false, "Invalid message payload");
+            ws.send(JSON.stringify(response), (error) => {
+                if (error) {
+                    console.error(error);
+                }
+            });
+        } else {
+            const sendPayload = {
+                fromId: message.fromId,
+                toId: message.toId,
+                content: message.content,
+                sentDate: getDateForDBStorage(),
+            };
+            response = createResponse(
+                true,
+                "Successfully received message",
+                message,
+            );
+            clients[message.toId].send(
+                JSON.stringify(sendPayload),
+                async (error) => {
+                    if (error) {
+                        console.error("Error while sending message to user");
+                    } else {
+                        await producer.send({
+                            topic: "direct-messages",
+                            messages: [
+                                {
+                                    key: "direct-message",
+                                    value: JSON.stringify({
+                                        ...sendPayload,
+                                        deliveredDate: getDateForDBStorage(),
+                                    }),
+                                },
+                            ],
+                        });
+                    }
+                },
+            );
+        }
     });
 
     ws.on("close", (code: number, reson: Buffer) => {
@@ -51,7 +111,7 @@ wss.on("connection", (ws: WebSocketExt, req: IncomingMessageExt) => {
     });
 
     ws.on("error", (code: number, reason: Buffer) => {
-        console.log("Some error occured");
+        console.error("Some error occured");
     });
 
     ws.on("pong", () => {
