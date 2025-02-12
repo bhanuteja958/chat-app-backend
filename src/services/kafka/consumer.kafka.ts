@@ -1,6 +1,6 @@
 import { Kafka } from "kafkajs";
-import { KAFKA_CONFIG } from "./config.kafka";
 import { createDirectMessage } from "../direct-messages.services";
+import { KAFKA_CONFIG } from "../../config/kafka";
 
 const kafka = new Kafka(KAFKA_CONFIG);
 
