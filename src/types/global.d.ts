@@ -41,6 +41,11 @@ declare global {
         content: string;
     }
 
+    interface iFriendRequest {
+        friendId: number;
+        friendForId: number;
+    }
+
     namespace Express {
         export interface Request {
             user?: iDecodedToken;

@@ -1,5 +1,5 @@
 import { Admin, ITopicConfig, Kafka } from "kafkajs";
-import { KAFKA_CONFIG } from "./config.kafka";
+import { KAFKA_CONFIG } from "../../config/kafka";
 
 const kafka: Kafka = new Kafka(KAFKA_CONFIG);
 

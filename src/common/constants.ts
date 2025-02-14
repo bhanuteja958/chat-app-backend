@@ -7,3 +7,8 @@ export const enum HTTP_STATUS {
     notFound = 404,
     internalServerError = 500,
 }
+export const enum FRIEND_REQUEST_STATUS {
+    pending = "pending",
+    accepted = "accepted",
+    declined = "declined",
+}

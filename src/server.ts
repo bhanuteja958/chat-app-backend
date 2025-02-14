@@ -10,6 +10,7 @@ import configureWebSocket from "./sockets";
 import { validateRequiredEnvironmentVariables } from "./common/helpers";
 import { consumeMessages } from "./services/kafka/consumer.kafka";
 import { createTopics } from "./services/kafka/topic.kafka";
+import friendRouter from "./routes/friend.routes";
 
 //checking if all environment variables exists or not
 validateRequiredEnvironmentVariables();
@@ -28,6 +29,7 @@ const corsOptions: CorsOptions = {
 app.use(cors(corsOptions));
 
 app.use(`${API_VERSION}/auth`, authRouter);
+app.use(`${API_VERSION}/friend`, friendRouter);
 
 const server: Server = app.listen(3000, async (error) => {
     if (!error) {

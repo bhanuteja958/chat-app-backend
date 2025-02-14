@@ -76,3 +76,22 @@ export const getUserIdAndPasswordHash = async (email: string) => {
         }
     }
 };
+
+export const getUserIdWithEmail = async (email: string) => {
+    let connection: PoolConnection = null;
+    try {
+        connection = await pool.getConnection();
+        const [results]: [RowDataPacket[], FieldPacket[]] =
+            await connection.execute(
+                "SELECT user_id FROM users WHERE email=? LIMIT 1",
+                [email],
+            );
+        return results.length > 0 ? results[0].user_id : null;
+    } catch (error) {
+        throw error;
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
