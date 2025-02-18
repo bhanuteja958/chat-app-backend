@@ -8,7 +8,10 @@ import { authMiddleWare } from "./middlewares/auth.middleware";
 import { Server } from "http";
 import configureWebSocket from "./sockets";
 import { validateRequiredEnvironmentVariables } from "./common/helpers";
-import { consumeMessages } from "./services/kafka/consumer.kafka";
+import {
+    consumeMessagesFromDirectMessagesTopic,
+    consumeMessagesFromDeliveredUnsentMessagesTopic,
+} from "./services/kafka/consumer.kafka";
 import { createTopics } from "./services/kafka/topic.kafka";
 import friendRouter from "./routes/friend.routes";
 
@@ -36,7 +39,8 @@ const server: Server = app.listen(3000, async (error) => {
         console.log(`Server listening on port ${PORT}...`);
         try {
             await createTopics();
-            await consumeMessages();
+            await consumeMessagesFromDirectMessagesTopic();
+            await consumeMessagesFromDeliveredUnsentMessagesTopic();
             configureWebSocket(server);
         } catch (error) {
             console.error("Error while initiating server", error);

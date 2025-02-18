@@ -4,12 +4,14 @@ import internal from "stream";
 import {
     createResponse,
     getCookiesObject,
-    getDateForDBStorage,
     validateAccessToken,
 } from "./common/helpers";
 import { URL } from "url";
-import { MESSSAGE } from "./schema/chat.schema";
 import producer from "./services/kafka/producer.kafka";
+import {
+    handleCommunicationWithUser,
+    sendUnsentMessageCountAndEveryFriendLatestMessage,
+} from "./services/chat.services";
 
 (async function () {
     try {
@@ -21,7 +23,7 @@ import producer from "./services/kafka/producer.kafka";
 
 const HEARTBEAT_INTERVAL = 1000 * 15; // 15 seconds
 
-export const clients: Record<number, WebSocketExt> = {};
+export const clients: Record<number, iClientData> = {};
 
 const wss = new WebSocketServer({
     noServer: true,
@@ -30,6 +32,7 @@ const wss = new WebSocketServer({
 const hearbeatInterval = setInterval(() => {
     wss.clients.forEach((client: WebSocketExt) => {
         if (!client.isAlive) {
+            delete clients[client.userId];
             client.terminate();
         } else {
             client.isAlive = false;
@@ -38,9 +41,13 @@ const hearbeatInterval = setInterval(() => {
     });
 }, HEARTBEAT_INTERVAL);
 
-wss.on("connection", (ws: WebSocketExt, req: IncomingMessageExt) => {
+wss.on("connection", async (ws: WebSocketExt, req: IncomingMessageExt) => {
     ws.isAlive = true;
-    clients[req.user.userId] = ws;
+    ws.currentViewingChat = null;
+    clients[req.user.userId] = {
+        connection: ws,
+        friendsChatData: {},
+    };
 
     if (req.user) {
         ws.userId = req.user.userId;
@@ -53,60 +60,11 @@ wss.on("connection", (ws: WebSocketExt, req: IncomingMessageExt) => {
     });
 
     ws.on("message", async (data: RawData, isBinary: boolean) => {
-        let response = {};
-        let isValidMessage = true;
-        let message: Record<string, any> = {};
-        try {
-            message = JSON.parse(data.toString()) as iMessage;
-            isValidMessage = await MESSSAGE.isValid(message);
-        } catch (error) {
-            isValidMessage = false;
-        }
-
-        if (!isValidMessage) {
-            response = createResponse(false, "Invalid message payload");
-            ws.send(JSON.stringify(response), (error) => {
-                if (error) {
-                    console.error(error);
-                }
-            });
-        } else {
-            const sendPayload = {
-                fromId: message.fromId,
-                toId: message.toId,
-                content: message.content,
-                sentDate: getDateForDBStorage(),
-            };
-            response = createResponse(
-                true,
-                "Successfully received message",
-                message,
-            );
-            clients[message.toId].send(
-                JSON.stringify(sendPayload),
-                async (error) => {
-                    if (error) {
-                        console.error("Error while sending message to user");
-                    } else {
-                        await producer.send({
-                            topic: "direct-messages",
-                            messages: [
-                                {
-                                    key: "direct-message",
-                                    value: JSON.stringify({
-                                        ...sendPayload,
-                                        deliveredDate: getDateForDBStorage(),
-                                    }),
-                                },
-                            ],
-                        });
-                    }
-                },
-            );
-        }
+        await handleCommunicationWithUser(clients, data, ws.userId);
     });
 
     ws.on("close", (code: number, reson: Buffer) => {
+        delete clients[ws.userId];
         console.log("Connection closed");
     });
 
@@ -117,6 +75,8 @@ wss.on("connection", (ws: WebSocketExt, req: IncomingMessageExt) => {
     ws.on("pong", () => {
         ws.isAlive = true;
     });
+
+    await sendUnsentMessageCountAndEveryFriendLatestMessage(ws);
 });
 
 wss.on("close", () => {

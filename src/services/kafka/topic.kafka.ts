@@ -9,6 +9,11 @@ const allTopics: ITopicConfig[] = [
         numPartitions: 20,
         replicationFactor: 1,
     },
+    {
+        topic: "delivered-unsent-messages",
+        numPartitions: 1,
+        replicationFactor: 1,
+    },
 ];
 
 export const createTopics = async () => {

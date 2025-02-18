@@ -158,10 +158,12 @@ export const getAllFriends = async (userId: number) => {
         connection = await pool.getConnection();
         let [results]: [RowDataPacket[], FieldPacket[]] =
             await connection.query(
-                `SELECT user_id, email, full_name, profile_pic FROM users WHERE user_id IN (SELECT (CASE WHEN friend_id = ? THEN friend_for_id ELSE friend_id END) AS friend_user_id FROM friends WHERE (friend_for_id = ? OR friend_id = ?) AND is_unfriended = 0)`,
+                `SELECT user_id as userId, email, full_name as fullName, profile_pic as profilePic FROM users WHERE user_id IN (SELECT (CASE WHEN friend_id = ? THEN friend_for_id ELSE friend_id END) AS friend_user_id FROM friends WHERE (friend_for_id = ? OR friend_id = ?) AND is_unfriended = 0)`,
                 [userId, userId, userId],
             );
-        return results.length > 0 ? results : [];
+        return results.length > 0
+            ? (results as unknown as iFriendDetails[])
+            : [];
     } catch (error) {
         throw error;
     } finally {

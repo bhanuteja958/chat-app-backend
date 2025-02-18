@@ -1,5 +1,6 @@
 import { IncomingMessage } from "http";
 import WebSocket from "ws";
+import { SOCKET_MESSAGE_TYPES } from "../common/constants";
 
 declare global {
     interface iResponse {
@@ -18,7 +19,18 @@ declare global {
 
     interface WebSocketExt extends WebSocket {
         isAlive: boolean;
+        uiStatus: string;
+        currentViewingChat: number | null;
         userId?: number;
+    }
+
+    interface iChatUIStatus {
+        offset: number;
+    }
+
+    interface iClientData {
+        connection: WebSocketExt;
+        friendsChatData: Record<number, iChatUIStatus>;
     }
 
     interface iDecodedToken {
@@ -28,7 +40,6 @@ declare global {
     interface IncomingMessageExt extends IncomingMessage {
         user?: iDecodedToken;
     }
-
     interface iTokenVerifyResponse {
         isAuthenticated: boolean;
         message: string;
@@ -41,9 +52,27 @@ declare global {
         content: string;
     }
 
+    interface iMessageWithSentDate extends iMessage {
+        sentDate: string;
+    }
+
     interface iFriendRequest {
         friendId: number;
         friendForId: number;
+    }
+
+    interface iFriendDetails {
+        userId: number;
+        fullName: string;
+        profilePic: string;
+        email: string;
+    }
+
+    type iSocketMessageType = `${SOCKET_MESSAGE_TYPES}`;
+
+    interface iSocketMessage {
+        type: iSocketMessageType;
+        data: any;
     }
 
     namespace Express {

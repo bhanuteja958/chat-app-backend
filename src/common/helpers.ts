@@ -10,6 +10,16 @@ export const createResponse = (
     data,
 });
 
+export const createSocketResponse = (
+    type: iSocketMessageType,
+    data: any = {},
+) => {
+    return {
+        type,
+        data,
+    };
+};
+
 export const errorResponse = (errorMessage: string) => {
     return {
         success: false,
