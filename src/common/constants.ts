@@ -20,6 +20,7 @@ export const enum SOCKET_MESSAGE_TYPES {
     historicalChat = "HISTORICAL_CHAT",
     userUIStatus = "USER_UI_STATUS",
     error = "ERROR",
+    loadHistoricalChat = "LOAD_HISTORICAL_CHAT",
 }
 
 export const enum UI_STATUS {

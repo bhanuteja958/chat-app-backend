@@ -133,10 +133,13 @@ export const sendDirectMessageToUser = async (
                                 }),
                             },
                         ]);
+                        user.friendsChatData[toId].offset += 1;
+                        clients[toId].friendsChatData[userId].offset += 1;
                     },
                 );
             } else {
                 await createUnsentMessage(chatData);
+                user.friendsChatData[toId].offset += 1;
             }
         } else {
             const response = createSocketResponse(SOCKET_MESSAGE_TYPES.error, {
@@ -144,6 +147,28 @@ export const sendDirectMessageToUser = async (
             });
             sendResponseToUser(clients[userId].connection, response);
         }
+    } catch (error) {
+        throw error;
+    }
+};
+
+const loadHistoricalChat = async (user: iClientData, friendId: number) => {
+    const userFriendChatStatus = user.friendsChatData[friendId];
+    let updatedOffset = 0;
+    try {
+        const historicalChat = await getSentMessagesBetweenFriendAndUser(
+            user.connection.userId,
+            friendId,
+            userFriendChatStatus.offset,
+        );
+        const response = createSocketResponse(
+            SOCKET_MESSAGE_TYPES.historicalChat,
+            historicalChat,
+        );
+        updatedOffset = historicalChat.length;
+        sendResponseToUser(user.connection, response, () => {
+            userFriendChatStatus.offset += updatedOffset;
+        });
     } catch (error) {
         throw error;
     }
@@ -188,7 +213,6 @@ const fetchMessagesFromAFriendToUser = async (
         );
         sendResponseToUser(user.connection, response, async () => {
             const deliveredDate = getDateForDBStorage();
-            user.friendsChatData[friendId].offset += updatedOffset;
             const messagesToPush = unsentMessagesBetweenUserAndFriendWithId
                 .filter((message) => message.toId === user.connection.userId)
                 .map((message) => {
@@ -214,6 +238,8 @@ const fetchMessagesFromAFriendToUser = async (
                     ],
                 );
             }
+            user.friendsChatData[friendId].offset += updatedOffset;
+            user.friendsChatData[friendId].isInitialFetchDone = true;
         });
     } catch (error) {
         throw error;
@@ -237,10 +263,13 @@ const handleUIStatusMessage = async (user: iClientData, data: any) => {
                 sendResponseToUser(user.connection, response);
             } else {
                 user.connection.currentViewingChat = data.friendId;
-                user.friendsChatData[data.friendId] = {
-                    offset: 0,
-                };
-                await fetchMessagesFromAFriendToUser(user, data.friendId);
+                if (!user.friendsChatData[data.friendId]?.isInitialFetchDone) {
+                    user.friendsChatData[data.friendId] = {
+                        offset: 0,
+                        isInitialFetchDone: false,
+                    };
+                    await fetchMessagesFromAFriendToUser(user, data.friendId);
+                }
             }
             break;
         default:
@@ -265,6 +294,20 @@ export const handleCommunicationWithUser = async (
             case SOCKET_MESSAGE_TYPES.messageToFriend:
                 await sendDirectMessageToUser(clients, message.data, userId);
                 return;
+            case SOCKET_MESSAGE_TYPES.loadHistoricalChat:
+                await loadHistoricalChat(
+                    clients[userId],
+                    message.data.friendId,
+                );
+                return;
+            default:
+                const response = createSocketResponse(
+                    SOCKET_MESSAGE_TYPES.error,
+                    {
+                        message: "Wrong socket message type",
+                    },
+                );
+                sendResponseToUser(clients[userId].connection, response);
         }
     } catch (error) {
         throw error;

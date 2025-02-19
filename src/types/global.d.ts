@@ -26,6 +26,7 @@ declare global {
 
     interface iChatUIStatus {
         offset: number;
+        isInitialFetchDone: boolean;
     }
 
     interface iClientData {
