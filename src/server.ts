@@ -18,14 +18,14 @@ import friendRouter from "./routes/friend.routes";
 //checking if all environment variables exists or not
 validateRequiredEnvironmentVariables();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const app: Express = express();
 app.use(cookieParser());
 app.use(express.json());
 app.use(authMiddleWare);
 
 const corsOptions: CorsOptions = {
-    origin: "*",
+    origin: "http://localhost:3000",
     credentials: true,
 };
 
@@ -34,7 +34,7 @@ app.use(cors(corsOptions));
 app.use(`${API_VERSION}/auth`, authRouter);
 app.use(`${API_VERSION}/friend`, friendRouter);
 
-const server: Server = app.listen(3000, async (error) => {
+const server: Server = app.listen(PORT, async (error) => {
     if (!error) {
         console.log(`Server listening on port ${PORT}...`);
         try {
