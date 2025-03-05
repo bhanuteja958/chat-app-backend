@@ -14,6 +14,7 @@ import {
 } from "./services/kafka/consumer.kafka";
 import { createTopics } from "./services/kafka/topic.kafka";
 import friendRouter from "./routes/friend.routes";
+import userRouter from "./routes/user.routes";
 
 //checking if all environment variables exists or not
 validateRequiredEnvironmentVariables();
@@ -33,6 +34,7 @@ app.use(cors(corsOptions));
 
 app.use(`${API_VERSION}/auth`, authRouter);
 app.use(`${API_VERSION}/friend`, friendRouter);
+app.use(`${API_VERSION}/user`, userRouter);
 
 const server: Server = app.listen(PORT, async (error) => {
     if (!error) {
