@@ -28,7 +28,7 @@ export const authMiddleWare = (
             const tokenVerifyResp: iTokenVerifyResponse =
                 validateAccessToken(accessToken);
 
-            if (!tokenVerifyResp) {
+            if (!tokenVerifyResp.isAuthenticated) {
                 res.status(HTTP_STATUS.unauthorized).json(
                     createResponse(false, tokenVerifyResp.message),
                 );
