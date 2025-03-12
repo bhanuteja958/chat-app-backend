@@ -21,16 +21,15 @@ validateRequiredEnvironmentVariables();
 
 const PORT = process.env.PORT || 5000;
 const app: Express = express();
-app.use(cookieParser());
-app.use(express.json());
-app.use(authMiddleWare);
-
 const corsOptions: CorsOptions = {
     origin: "http://localhost:3000",
     credentials: true,
 };
 
 app.use(cors(corsOptions));
+app.use(cookieParser());
+app.use(express.json());
+app.use(authMiddleWare);
 
 app.use(`${API_VERSION}/auth`, authRouter);
 app.use(`${API_VERSION}/friend`, friendRouter);

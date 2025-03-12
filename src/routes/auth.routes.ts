@@ -22,6 +22,8 @@ authRouter.post("/login", async (req: Request, res: Response) => {
         if (payload?.cookies?.accessToken) {
             res.cookie("accessToken", payload.cookies.accessToken, {
                 httpOnly: true,
+                secure: false,
+                sameSite: "lax",
             });
         }
         res.status(payload.status).json(payload.response);
