@@ -76,6 +76,14 @@ declare global {
         data: any;
     }
 
+    interface iUserInfo {
+        userId: number;
+        fullName: string;
+        profilePic: string | null;
+        dob: string;
+        is_verified: 0 | 1;
+    }
+
     namespace Express {
         export interface Request {
             user?: iDecodedToken;

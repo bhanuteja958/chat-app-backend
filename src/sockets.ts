@@ -60,10 +60,10 @@ wss.on("connection", async (ws: WebSocketExt, req: IncomingMessageExt) => {
     });
 
     ws.on("message", async (data: RawData, isBinary: boolean) => {
-        await handleCommunicationWithUser(clients, data, ws.userId);
+        await handleCommunicationWithUser(data, ws.userId);
     });
 
-    ws.on("close", (code: number, reson: Buffer) => {
+    ws.on("close", (code: number, reason: Buffer) => {
         delete clients[ws.userId];
         console.log("Connection closed");
     });

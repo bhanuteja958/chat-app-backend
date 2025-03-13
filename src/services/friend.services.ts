@@ -2,6 +2,7 @@ import { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import pool from "../config/sql";
 import { PoolConnection } from "mysql2/promise";
 import { FRIEND_REQUEST_STATUS } from "../common/constants";
+import cache from "../config/cache";
 
 export const createFriendRequest = async (payload: iFriendRequest) => {
     let connection: PoolConnection | null = null;
@@ -193,5 +194,52 @@ export const toggleUnfriendStatus = async (
         if (connection) {
             connection.release();
         }
+    }
+};
+
+export const getFriendsIdList = async (userId: number) => {
+    try {
+        let friendsIds: number[] = [];
+        const userFriendsRedisKey = `friends:${userId}`;
+        friendsIds = (await cache.smembers(userFriendsRedisKey)).map(Number);
+        if (friendsIds.length === 0) {
+            const friendsDetails: iFriendDetails[] =
+                await getAllFriends(userId);
+            friendsIds = friendsDetails.map((detail) => detail.userId);
+        }
+        return friendsIds;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const checkIfFriends = async (
+    currentUserId: number,
+    friendId: number,
+) => {
+    const currentUserFriendsSetRedisKey = `friends:${currentUserId}`;
+    try {
+        const isFriend = await cache.sismember(
+            currentUserFriendsSetRedisKey,
+            friendId,
+        );
+
+        if (!isFriend) {
+            const friendshipDetails = await getFriendshipDetails(
+                friendId,
+                currentUserId,
+            );
+
+            if (!friendshipDetails) {
+                return false;
+            } else {
+                await cache.sadd(currentUserFriendsSetRedisKey, friendId);
+                return true;
+            }
+        } else {
+            return true;
+        }
+    } catch (error) {
+        throw error;
     }
 };

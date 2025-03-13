@@ -1,9 +1,7 @@
-import { Message, Producer } from "kafkajs";
+import { Message, Producer, ProducerRecord } from "kafkajs";
 import { RawData } from "ws";
 import { createSocketResponse, getDateForDBStorage } from "../common/helpers";
 import producer from "./kafka/producer.kafka";
-import cache from "../config/cache";
-import { getAllFriends, getFriendshipDetails } from "./friend.services";
 import {
     createUnsentMessage,
     getAllUnsentMessagesBetweenFriendAndUser,
@@ -12,75 +10,34 @@ import {
 import { SOCKET_MESSAGE_TYPES, UI_STATUS } from "../common/constants";
 import { getLatestMessagesForUserFromEachFriend } from "./messages.services";
 import { getSentMessagesBetweenFriendAndUser } from "./direct-messages.services";
+import { checkIfFriends, getFriendsIdList } from "./friend.services";
+import { clients } from "../sockets";
 
 const pushMessagesToTopic = async (
     producer: Producer,
     topicName: string,
     messages: Message[],
 ) => {
+    const kafkaEvent: ProducerRecord = {
+        topic: topicName,
+        messages,
+    };
     try {
-        await producer.send({
-            topic: topicName,
-            messages,
-        });
+        await producer.send(kafkaEvent);
     } catch (error) {
-        throw error;
+        console.log(error);
     }
 };
 
-const checkIfFriends = async (currentUserId: number, friendId: number) => {
-    const currentUserFriendsSetRedisKey = `friends:${currentUserId}`;
-    try {
-        const isFriend = await cache.sismember(
-            currentUserFriendsSetRedisKey,
-            friendId,
-        );
-
-        if (!isFriend) {
-            const friendshipDetails = await getFriendshipDetails(
-                friendId,
-                currentUserId,
-            );
-
-            if (!friendshipDetails) {
-                return false;
-            } else {
-                await cache.sadd(currentUserFriendsSetRedisKey, friendId);
-                return true;
-            }
-        } else {
-            return true;
-        }
-    } catch (error) {
-        throw error;
-    }
-};
-
-const getFriendsIdList = async (userId: number) => {
-    try {
-        let friendsIds: number[] = [];
-        const userFriendsRedisKey = `friends:${userId}`;
-        friendsIds = (await cache.smembers(userFriendsRedisKey)).map(Number);
-        if (friendsIds.length === 0) {
-            const friendsDetails: iFriendDetails[] =
-                await getAllFriends(userId);
-            friendsIds = friendsDetails.map((detail) => detail.userId);
-        }
-        return friendsIds;
-    } catch (error) {
-        throw error;
-    }
-};
-
-export const sendResponseToUser = (
+const sendResponseToUser = (
     client: WebSocketExt,
     payload: iSocketMessage,
     afterResponseProcess?: () => Promise<void> | void,
 ) => {
     if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(payload), async (socketError) => {
+        client.send(JSON.stringify(payload), async (socketError: Error) => {
             if (socketError) {
-                console.log(socketError);
+                console.log(socketError.message);
             } else {
                 try {
                     afterResponseProcess && (await afterResponseProcess());
@@ -95,7 +52,6 @@ export const sendResponseToUser = (
 };
 
 export const sendDirectMessageToUser = async (
-    clients: Record<number, iClientData>,
     message: iMessage,
     userId: number,
 ) => {
@@ -163,7 +119,10 @@ const loadHistoricalChat = async (user: iClientData, friendId: number) => {
         );
         const response = createSocketResponse(
             SOCKET_MESSAGE_TYPES.historicalChat,
-            historicalChat,
+            {
+                friendId,
+                chat: historicalChat,
+            },
         );
         updatedOffset = historicalChat.length;
         sendResponseToUser(user.connection, response, () => {
@@ -174,7 +133,7 @@ const loadHistoricalChat = async (user: iClientData, friendId: number) => {
     }
 };
 
-const fetchMessagesFromAFriendToUser = async (
+const sendLatestMessagesFromAFriendToUser = async (
     user: iClientData,
     friendId: number,
 ) => {
@@ -209,7 +168,10 @@ const fetchMessagesFromAFriendToUser = async (
         updatedOffset = historicalChat.length;
         const response = createSocketResponse(
             SOCKET_MESSAGE_TYPES.historicalChat,
-            historicalChat,
+            {
+                friendId,
+                chat: historicalChat,
+            },
         );
         sendResponseToUser(user.connection, response, async () => {
             const deliveredDate = getDateForDBStorage();
@@ -268,7 +230,10 @@ const handleUIStatusMessage = async (user: iClientData, data: any) => {
                         offset: 0,
                         isInitialFetchDone: false,
                     };
-                    await fetchMessagesFromAFriendToUser(user, data.friendId);
+                    await sendLatestMessagesFromAFriendToUser(
+                        user,
+                        data.friendId,
+                    );
                 }
             }
             break;
@@ -281,7 +246,6 @@ const handleUIStatusMessage = async (user: iClientData, data: any) => {
 };
 
 export const handleCommunicationWithUser = async (
-    clients: Record<number, iClientData>,
     rawData: RawData,
     userId: number,
 ) => {
@@ -292,7 +256,7 @@ export const handleCommunicationWithUser = async (
                 await handleUIStatusMessage(clients[userId], message.data);
                 return;
             case SOCKET_MESSAGE_TYPES.messageToFriend:
-                await sendDirectMessageToUser(clients, message.data, userId);
+                await sendDirectMessageToUser(message.data, userId);
                 return;
             case SOCKET_MESSAGE_TYPES.loadHistoricalChat:
                 await loadHistoricalChat(
