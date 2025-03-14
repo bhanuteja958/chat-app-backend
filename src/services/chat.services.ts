@@ -69,13 +69,13 @@ export const sendDirectMessageToUser = async (
         const areFriends = await checkIfFriends(fromId, toId);
 
         if (areFriends) {
-            const response = createSocketResponse(
-                user.connection.currentViewingChat === toId
-                    ? SOCKET_MESSAGE_TYPES.messageFromChattingFriend
-                    : SOCKET_MESSAGE_TYPES.messageFromNotChattingFriend,
-                chatData,
-            );
             if (clients[toId]) {
+                const response = createSocketResponse(
+                    clients[toId].connection.currentViewingChat === userId
+                        ? SOCKET_MESSAGE_TYPES.messageFromChattingFriend
+                        : SOCKET_MESSAGE_TYPES.messageFromNotChattingFriend,
+                    chatData,
+                );
                 sendResponseToUser(
                     clients[toId].connection,
                     response,
@@ -90,7 +90,9 @@ export const sendDirectMessageToUser = async (
                             },
                         ]);
                         user.friendsChatData[toId].offset += 1;
-                        clients[toId].friendsChatData[userId].offset += 1;
+                        if (clients[toId].friendsChatData[userId]) {
+                            clients[toId].friendsChatData[userId].offset += 1;
+                        }
                     },
                 );
             } else {
