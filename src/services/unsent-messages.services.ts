@@ -72,7 +72,7 @@ export const getAllUnsentMessagesBetweenFriendAndUser = async (
         connection = await pool.getConnection();
         const [results]: [RowDataPacket[], FieldPacket[]] =
             await connection.query(
-                `SELECT id, from_id as fromId, to_id as toId, content, DATE_FORMAT(sent_date, '%Y-%m-%d %H:%i:%s') as sentDate from unsent_messages where (from_id = ? and to_id = ?) or (from_id = ?  and to_id = ?) ORDER BY sent_date DESC limit 10`,
+                `SELECT id, from_id as fromId, to_id as toId, content, DATE_FORMAT(sent_date, '%Y-%m-%d %H:%i:%s') as sentDate, CONCAT('unsent-', id) as messageId from unsent_messages where (from_id = ? and to_id = ?) or (from_id = ?  and to_id = ?) ORDER BY sent_date DESC limit 10`,
                 [currentUserId, friendId, friendId, currentUserId],
             );
         return results.length === 0 ? [] : results;

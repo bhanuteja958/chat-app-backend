@@ -63,7 +63,7 @@ export const getSentMessagesBetweenFriendAndUser = async (
         connection = await pool.getConnection();
         const [results]: [RowDataPacket[], FieldPacket[]] =
             await connection.query(
-                `SELECT from_id as fromId, to_id as toId, content, DATE_FORMAT(sent_date, '%Y-%m-%d %H:%i:%s') as sentDate from direct_messages where (from_id = ? and to_id = ?) or (from_id = ?  and to_id = ?) ORDER BY sent_date DESC LIMIT ${CHAT_PAGINATION_LIMIT} OFFSET ${offset}`,
+                `SELECT from_id as fromId, to_id as toId, content, DATE_FORMAT(sent_date, '%Y-%m-%d %H:%i:%s') as sentDate, CONCAT('sent-', id) as messageId from direct_messages where (from_id = ? and to_id = ?) or (from_id = ?  and to_id = ?) ORDER BY sent_date DESC LIMIT ${CHAT_PAGINATION_LIMIT} OFFSET ${offset}`,
                 [currentUserId, friendId, friendId, currentUserId],
             );
         return results;

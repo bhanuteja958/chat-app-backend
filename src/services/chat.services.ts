@@ -149,12 +149,13 @@ const sendLatestMessagesFromAFriendToUser = async (
             );
         const unsentMessagesBetweenUserAndFriendWithoutId =
             unsentMessagesBetweenUserAndFriendWithId.map((message) => {
-                const { fromId, toId, content, sentDate } = message;
+                const { fromId, toId, content, sentDate, messageId } = message;
                 return {
                     fromId,
                     toId,
                     content,
                     sentDate,
+                    messageId,
                 };
             });
         const sentMessagesBetweenUserAndFriend =
